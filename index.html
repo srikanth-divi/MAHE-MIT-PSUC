@@ -1,6 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PSUC Course Hub</title>
+    <!-- Tailwind CSS CDN for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- React, ReactDOM, and Babel for in-browser JSX compilation -->
+    <script src="https://unpkg.com/react/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        /* General body styling */
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
         // --- START PASTE FROM course-template-code ARTIFACT ---
 
-        import React, { useState, useEffect } from 'react';
+        // REMOVE THIS LINE: import React, { useState, useEffect } from 'react';
+        // React, useState, and useEffect are globally available when loaded via unpkg.
 
         // Main App Component for the Course Website
         const App = () => {
@@ -359,4 +386,8 @@ p {
             );
         };
 
-        // --- END PASTE FROM course-template-code ARTIFACT ---
+        // This line renders your React App component into the 'root' div in your HTML.
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
