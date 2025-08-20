@@ -23,253 +23,256 @@
 <body>
     <div id="root"></div>
 
-    <script type="text/babel">
-        // --- START PASTE FROM course-template-code ARTIFACT ---
+    <!--
+        This script block now uses type="text/javascript" and programmatically
+        transforms the JSX using Babel. This is a more robust way to ensure
+        in-browser compilation works correctly.
+    -->
+    <script type="text/javascript">
+        // The React component code is wrapped in a string template literal.
+        // We use React.useState, React.useEffect explicitly as they are global
+        // and not imported in this setup.
+        const appCode = `
+            // Main App Component for the Course Website
+            const App = () => {
+                // State to manage the currently active page/module
+                const [currentPage, setCurrentPage] = React.useState('home'); // Use React.useState
 
-        // REMOVE THIS LINE: import React, { useState, useEffect } from 'react';
-        // React, useState, and useEffect are globally available when loaded via unpkg.
-
-        // Main App Component for the Course Website
-        const App = () => {
-            // State to manage the currently active page/module
-            const [currentPage, setCurrentPage] = useState('home');
-
-            // Utility function for exponential backoff
-            const exponentialBackoffFetch = async (url, options, maxRetries = 5, delay = 1000) => {
-                for (let i = 0; i < maxRetries; i++) {
-                    try {
-                        const response = await fetch(url, options);
-                        if (!response.ok) {
-                            // Check for rate limiting or server errors
-                            if (response.status === 429 || response.status >= 500) {
-                                console.warn(`Retrying in ${delay / 1000}s... (Attempt ${i + 1}/${maxRetries})`);
+                // Utility function for exponential backoff
+                const exponentialBackoffFetch = async (url, options, maxRetries = 5, delay = 1000) => {
+                    for (let i = 0; i < maxRetries; i++) {
+                        try {
+                            const response = await fetch(url, options);
+                            if (!response.ok) {
+                                if (response.status === 429 || response.status >= 500) {
+                                    console.warn(\`Retrying in \${delay / 1000}s... (Attempt \${i + 1}/\${maxRetries})\`);
+                                    await new Promise(resolve => setTimeout(resolve, delay));
+                                    delay *= 2;
+                                    continue;
+                                }
+                            }
+                            return response;
+                        } catch (error) {
+                            console.error(\`Fetch attempt \${i + 1} failed:\`, error);
+                            if (i < maxRetries - 1) {
                                 await new Promise(resolve => setTimeout(resolve, delay));
-                                delay *= 2; // Exponential backoff
-                                continue;
+                                delay *= 2;
+                            } else {
+                                throw error;
                             }
                         }
-                        return response;
-                    } catch (error) {
-                        console.error(`Fetch attempt ${i + 1} failed:`, error);
-                        if (i < maxRetries - 1) {
-                            await new Promise(resolve => setTimeout(resolve, delay));
-                            delay *= 2;
-                        } else {
-                            throw error; // Re-throw if max retries reached
-                        }
                     }
-                }
-                throw new Error('Max retries exceeded for fetch request.');
-            };
-
-            // Component to display formatted code snippets (for static display)
-            const CodeSnippet = ({ language, code, title }) => (
-                <div className="bg-gray-800 rounded-lg shadow-md overflow-hidden mb-6">
-                    <div className="bg-gray-700 px-4 py-3 border-b border-gray-600 flex justify-between items-center">
-                        <span className="text-sm font-semibold text-gray-200">{title || `Code Example (${language})`}</span>
-                        <span className="text-xs text-gray-400 uppercase">{language}</span>
-                    </div>
-                    <pre className="p-4 overflow-x-auto text-sm">
-                        <code className={`language-${language} text-gray-200`}>
-                            {code}
-                        </code>
-                    </pre>
-                </div>
-            );
-
-            // NEW: Interactive Code Editor Component
-            const InteractiveCodeEditor = ({ language, initialCode, title }) => {
-                const [code, setCode] = useState(initialCode);
-                const [output, setOutput] = useState('');
-                const [isLoading, setIsLoading] = useState(false);
-                const [error, setError] = useState('');
-
-                const handleRunCode = async () => {
-                    setIsLoading(true);
-                    setOutput('');
-                    setError('');
-                    try {
-                        const prompt = `Given the following ${language} code, provide the exact standard output it would produce if compiled and run without any user input. If there's an error, state "Error: " followed by a brief description. Only include the output, no explanations or additional text:\n\n\`\`\`${language}\n${code}\n\`\`\``;
-
-                        const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
-                        const payload = { contents: chatHistory };
-                        const apiKey = ""; // Canvas will provide this at runtime
-                        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
-
-                        const response = await exponentialBackoffFetch(apiUrl, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
-                        });
-
-                        const result = await response.json();
-                        if (result.candidates && result.candidates.length > 0 &&
-                            result.candidates[0].content && result.candidates[0].content.parts &&
-                            result.candidates[0].content.parts.length > 0) {
-                            const text = result.candidates[0].content.parts[0].text;
-                            setOutput(text);
-                        } else {
-                            setOutput("Error: Could not get a valid response from the code runner.");
-                        }
-                    } catch (err) {
-                        console.error("Failed to run code:", err);
-                        setError("Failed to connect to the code runner. Please try again.");
-                    } finally {
-                        setIsLoading(false);
-                    }
+                    throw new Error('Max retries exceeded for fetch request.');
                 };
 
-                return (
+                // Component to display formatted code snippets (for static display)
+                const CodeSnippet = ({ language, code, title }) => (
                     <div className="bg-gray-800 rounded-lg shadow-md overflow-hidden mb-6">
                         <div className="bg-gray-700 px-4 py-3 border-b border-gray-600 flex justify-between items-center">
-                            <span className="text-sm font-semibold text-gray-200">{title || `Interactive ${language} Code Editor`}</span>
+                            <span className="text-sm font-semibold text-gray-200">{title || \`Code Example (\${language})\`}</span>
+                            <span className="text-xs text-gray-400 uppercase">{language}</span>
                         </div>
-                        <div className="p-4">
-                            <textarea
-                                className="w-full h-48 p-3 bg-gray-900 text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
-                                value={code}
-                                onChange={(e) => setCode(e.target.value)}
-                                placeholder={`Write your ${language} code here...`}
-                                spellCheck="false"
-                            ></textarea>
-                            <button
-                                onClick={handleRunCode}
-                                disabled={isLoading}
-                                className="mt-4 px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isLoading ? 'Running...' : 'Run Code'}
-                            </button>
+                        <pre className="p-4 overflow-x-auto text-sm">
+                            <code className={\`language-\${language} text-gray-200\`}>
+                                {code}
+                            </code>
+                        </pre>
+                    </div>
+                );
 
-                            {error && (
-                                <div className="mt-4 p-3 bg-red-800 text-red-100 rounded-md">
-                                    Error: {error}
-                                </div>
-                            )}
+                // NEW: Interactive Code Editor Component
+                const InteractiveCodeEditor = ({ language, initialCode, title }) => {
+                    const [code, setCode] = React.useState(initialCode); // Use React.useState
+                    const [output, setOutput] = React.useState(''); // Use React.useState
+                    const [isLoading, setIsLoading] = React.useState(false); // Use React.useState
+                    const [error, setError] = React.useState(''); // Use React.useState
 
-                            {output && (
-                                <div className="mt-4">
-                                    <h3 className="text-lg font-semibold text-gray-300 mb-2">Output:</h3>
-                                    <pre className="p-3 bg-gray-900 text-gray-200 rounded-md overflow-x-auto text-sm">
-                                        <code>{output}</code>
-                                    </pre>
-                                </div>
-                            )}
+                    const handleRunCode = async () => {
+                        setIsLoading(true);
+                        setOutput('');
+                        setError('');
+                        try {
+                            const prompt = \`Given the following \${language} code, provide the exact standard output it would produce if compiled and run without any user input. If there's an error, state "Error: " followed by a brief description. Only include the output, no explanations or additional text:\\n\\n\`\`\`\${language}\\n\${code}\\n\`\`\`\`;
+
+                            const chatHistory = [{ role: "user", parts: [{ text: prompt }] }];
+                            const payload = { contents: chatHistory };
+                            const apiKey = ""; // Canvas will provide this at runtime
+                            const apiUrl = \`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=\${apiKey}\`;
+
+                            const response = await exponentialBackoffFetch(apiUrl, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(payload)
+                            });
+
+                            const result = await response.json();
+                            if (result.candidates && result.candidates.length > 0 &&
+                                result.candidates[0].content && result.candidates[0].content.parts &&
+                                result.candidates[0].content.parts.length > 0) {
+                                const text = result.candidates[0].content.parts[0].text;
+                                setOutput(text);
+                            } else {
+                                setOutput("Error: Could not get a valid response from the code runner.");
+                            }
+                        } catch (err) {
+                            console.error("Failed to run code:", err);
+                            setError("Failed to connect to the code runner. Please try again.");
+                        } finally {
+                            setIsLoading(false);
+                        }
+                    };
+
+                    return (
+                        <div className="bg-gray-800 rounded-lg shadow-md overflow-hidden mb-6">
+                            <div className="bg-gray-700 px-4 py-3 border-b border-gray-600 flex justify-between items-center">
+                                <span className="text-sm font-semibold text-gray-200">{title || \`Interactive \${language} Code Editor\`}</span>
+                            </div>
+                            <div className="p-4">
+                                <textarea
+                                    className="w-full h-48 p-3 bg-gray-900 text-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-sm"
+                                    value={code}
+                                    onChange={(e) => setCode(e.target.value)}
+                                    placeholder={\`Write your \${language} code here...\`}
+                                    spellCheck="false"
+                                ></textarea>
+                                <button
+                                    onClick={handleRunCode}
+                                    disabled={isLoading}
+                                    className="mt-4 px-6 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isLoading ? 'Running...' : 'Run Code'}
+                                </button>
+
+                                {error && (
+                                    <div className="mt-4 p-3 bg-red-800 text-red-100 rounded-md">
+                                        Error: {error}
+                                    </div>
+                                )}
+
+                                {output && (
+                                    <div className="mt-4">
+                                        <h3 className="text-lg font-semibold text-gray-300 mb-2">Output:</h3>
+                                        <pre className="p-3 bg-gray-900 text-gray-200 rounded-md overflow-x-auto text-sm">
+                                            <code>{output}</code>
+                                        </pre>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                };
+
+
+                // Home Page Content
+                const HomePage = () => (
+                    <div className="p-6">
+                        <h2 className="text-3xl font-bold text-indigo-400 mb-4">Welcome to Our Course! 👋</h2>
+                        <p className="text-gray-300 leading-relaxed mb-6">
+                            This course will guide you through the fundamentals of various programming concepts and technologies.
+                            Each module is designed to be hands-on, with clear explanations and practical code examples.
+                        </p>
+                        <p className="text-gray-300 leading-relaxed">
+                            Use the navigation on the left to explore different modules. Let's start coding!
+                        </p>
+                        <div className="mt-8">
+                            <h3 className="text-2xl font-semibold text-purple-300 mb-4">Course Goals:</h3>
+                            <ul className="list-disc list-inside text-gray-300 space-y-2">
+                                <li>Understand core programming principles.</li>
+                                <li>Develop problem-solving skills through practical exercises.</li>
+                                <li>Build small projects to solidify learning.</li>
+                                <li>Gain confidence in writing clean and efficient code.</li>
+                            </ul>
                         </div>
                     </div>
                 );
-            };
 
+                // Module 1: C Basics Page
+                const Module1CBasicsPage = () => (
+                    <div className="p-6">
+                        <h2 className="text-3xl font-bold text-teal-400 mb-4">Module 1: C Basics 💻</h2>
+                        <p className="text-gray-300 leading-relaxed mb-6">
+                            Welcome to the foundational module on C programming! We'll start with the classic "Hello, World!" program and understand its structure.
+                        </p>
 
-            // Home Page Content
-            const HomePage = () => (
-                <div className="p-6">
-                    <h2 className="text-3xl font-bold text-indigo-400 mb-4">Welcome to Our Course! 👋</h2>
-                    <p className="text-gray-300 leading-relaxed mb-6">
-                        This course will guide you through the fundamentals of various programming concepts and technologies.
-                        Each module is designed to be hands-on, with clear explanations and practical code examples.
-                    </p>
-                    <p className="text-gray-300 leading-relaxed">
-                        Use the navigation on the left to explore different modules. Let's start coding!
-                    </p>
-                    <div className="mt-8">
-                        <h3 className="text-2xl font-semibold text-purple-300 mb-4">Course Goals:</h3>
-                        <ul className="list-disc list-inside text-gray-300 space-y-2">
-                            <li>Understand core programming principles.</li>
-                            <li>Develop problem-solving skills through practical exercises.</li>
-                            <li>Build small projects to solidify learning.</li>
-                            <li>Gain confidence in writing clean and efficient code.</li>
-                        </ul>
-                    </div>
-                </div>
-            );
-
-            // Module 1: C Basics Page
-            const Module1CBasicsPage = () => (
-                <div className="p-6">
-                    <h2 className="text-3xl font-bold text-teal-400 mb-4">Module 1: C Basics 💻</h2>
-                    <p className="text-gray-300 leading-relaxed mb-6">
-                        Welcome to the foundational module on C programming! We'll start with the classic "Hello, World!" program and understand its structure.
-                    </p>
-
-                    <h3 className="text-2xl font-semibold text-pink-300 mb-4">Your First C Program: Hello, World!</h3>
-                    <p className="text-gray-300 leading-relaxed mb-4">
-                        The `printf()` function is used to print output to the console.
-                    </p>
-                    <CodeSnippet
-                        title="Hello World C Code"
-                        language="c"
-                        code={`#include <stdio.h>
+                        <h3 className="text-2xl font-semibold text-pink-300 mb-4">Your First C Program: Hello, World!</h3>
+                        <p className="text-gray-300 leading-relaxed mb-4">
+                            The \`printf()\` function is used to print output to the console.
+                        </p>
+                        <CodeSnippet
+                            title="Hello World C Code"
+                            language="c"
+                            code={\`#include <stdio.h>
 
 int main() {
-    printf("Hello, World!\\n"); // Prints "Hello, World!" to console
+    printf("Hello, World!\\\\n"); // Prints "Hello, World!" to console
     return 0; // Indicates successful execution
 }
-`}
-                    />
+\`}
+                        />
 
-                    <h3 className="text-2xl font-semibold text-pink-300 mb-4">Try It Yourself! Interactive C Editor</h3>
-                    <p className="text-gray-300 leading-relaxed mb-4">
-                        Modify the code below and click "Run Code" to see the output.
-                        Experiment with different messages or simple arithmetic operations.
-                    </p>
-                    <InteractiveCodeEditor
-                        title="Your C Sandbox"
-                        language="c"
-                        initialCode={`#include <stdio.h>
+                        <h3 className="text-2xl font-semibold text-pink-300 mb-4">Try It Yourself! Interactive C Editor</h3>
+                        <p className="text-gray-300 leading-relaxed mb-4">
+                            Modify the code below and click "Run Code" to see the output.
+                            Experiment with different messages or simple arithmetic operations.
+                        </p>
+                        <InteractiveCodeEditor
+                            title="Your C Sandbox"
+                            language="c"
+                            initialCode={\`#include <stdio.h>
 
 int main() {
     int a = 10;
     int b = 20;
     int sum = a + b;
-    printf("The sum of %d and %d is %d\\n", a, b, sum);
+    printf("The sum of %d and %d is %d\\\\n", a, b, sum);
     return 0;
 }
-`}
-                    />
+\`}
+                        />
 
-                    <h3 className="text-2xl font-semibold text-pink-300 mb-4">Variables and Data Types</h3>
-                    <p className="text-gray-300 leading-relaxed mb-4">
-                        In C, you must declare the type of a variable explicitly.
-                    </p>
-                    <CodeSnippet
-                        title="C Variables Example"
-                        language="c"
-                        code={`#include <stdio.h>
+                        <h3 className="text-2xl font-semibold text-pink-300 mb-4">Variables and Data Types</h3>
+                        <p className="text-gray-300 leading-relaxed mb-4">
+                            In C, you must declare the type of a variable explicitly.
+                        </p>
+                        <CodeSnippet
+                            title="C Variables Example"
+                            language="c"
+                            code={\`#include <stdio.h>
 
 int main() {
     int age = 25;           // Integer
     float pi = 3.14;        // Floating-point number
     char grade = 'A';       // Single character
 
-    printf("Age: %d\\n", age);
-    printf("Pi: %f\\n", pi);
-    printf("Grade: %c\\n", grade);
+    printf("Age: %d\\\\n", age);
+    printf("Pi: %f\\\\n", pi);
+    printf("Grade: %c\\\\n", grade);
     return 0;
 }
-`}
-                    />
-                     <p className="text-gray-400 text-sm mt-6">
-                        <span className="font-semibold">Exercise:</span> Try declaring different types of variables (e.g., `double`, `short int`) in the interactive editor!
-                    </p>
-                </div>
-            );
+\`}
+                        />
+                         <p className="text-gray-400 text-sm mt-6">
+                            <span className="font-semibold">Exercise:</span> Try declaring different types of variables (e.g., \`double\`, \`short int\`) in the interactive editor!
+                        </p>
+                    </div>
+                );
 
-            // Module 2: Basic HTML & CSS
-            const Module2Page = () => (
-                <div className="p-6">
-                    <h2 className="text-3xl font-bold text-yellow-400 mb-4">Module 2: Basic HTML & CSS 🌐</h2>
-                    <p className="text-gray-300 leading-relaxed mb-6">
-                        Learn the building blocks of web pages with HTML and how to style them beautifully with CSS.
-                    </p>
+                // Module 2: Basic HTML & CSS
+                const Module2Page = () => (
+                    <div className="p-6">
+                        <h2 className="text-3xl font-bold text-yellow-400 mb-4">Module 2: Basic HTML & CSS 🌐</h2>
+                        <p className="text-gray-300 leading-relaxed mb-6">
+                            Learn the building blocks of web pages with HTML and how to style them beautifully with CSS.
+                        </p>
 
-                    <h3 className="text-2xl font-semibold text-cyan-300 mb-4">HTML Structure</h3>
-                    <p className="text-gray-300 leading-relaxed mb-4">
-                        Every HTML document has a basic structure.
-                    </p>
-                    <CodeSnippet
-                        title="Basic HTML Document"
-                        language="html"
-                        code={`<!DOCTYPE html>
+                        <h3 className="text-2xl font-semibold text-cyan-300 mb-4">HTML Structure</h3>
+                        <p className="text-gray-300 leading-relaxed mb-4">
+                            Every HTML document has a basic structure.
+                        </p>
+                        <CodeSnippet
+                            title="Basic HTML Document"
+                            language="html"
+                            code={`<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -282,16 +285,16 @@ int main() {
 </body>
 </html>
 `}
-                    />
+                        />
 
-                    <h3 className="text-2xl font-semibold text-cyan-300 mb-4">Basic CSS Styling</h3>
-                    <p className="text-gray-300 leading-relaxed mb-4">
-                        Apply styles to HTML elements using CSS.
-                    </p>
-                    <CodeSnippet
-                        title="CSS Styling Example"
-                        language="css"
-                        code={`/* styles.css */
+                        <h3 className="text-2xl font-semibold text-cyan-300 mb-4">Basic CSS Styling</h3>
+                        <p className="text-gray-300 leading-relaxed mb-4">
+                            Apply styles to HTML elements using CSS.
+                        </p>
+                        <CodeSnippet
+                            title="CSS Styling Example"
+                            language="css"
+                            code={`/* styles.css */
 body {
     font-family: Arial, sans-serif;
     background-color: #f0f0f0;
@@ -307,87 +310,87 @@ p {
     line-height: 1.6;
 }
 `}
-                    />
+                        />
 
-                    <p className="text-gray-400 text-sm mt-6">
-                        <span className="font-semibold">Tip:</span> You can link your CSS file to your HTML using `&lt;link rel="stylesheet" href="styles.css"&gt;` in the `&lt;head&gt;` section!
-                    </p>
-                </div>
-            );
+                        <p className="text-gray-400 text-sm mt-6">
+                            <span className="font-semibold">Tip:</span> You can link your CSS file to your HTML using `&lt;link rel="stylesheet" href="styles.css"&gt;` in the `&lt;head&gt;` section!
+                        </p>
+                    </div>
+                );
 
-            // Function to render the correct page content based on currentPage state
-            const renderPage = () => {
-                switch (currentPage) {
-                    case 'home':
-                        return <HomePage />;
-                    case 'module1-c-basics':
-                        return <Module1CBasicsPage />;
-                    case 'module2':
-                        return <Module2Page />;
-                    default:
-                        return <HomePage />; // Fallback to home page
-                }
+                // Function to render the correct page content based on currentPage state
+                const renderPage = () => {
+                    switch (currentPage) {
+                        case 'home':
+                            return <HomePage />;
+                        case 'module1-c-basics':
+                            return <Module1CBasicsPage />;
+                        case 'module2':
+                            return <Module2Page />;
+                        default:
+                            return <HomePage />; // Fallback to home page
+                    }
+                };
+
+                return (
+                    <div className="min-h-screen bg-gray-900 text-white flex flex-col md:flex-row">
+                        {/* Sidebar Navigation */}
+                        <aside className="w-full md:w-64 bg-gray-800 p-6 flex flex-col items-center md:items-start border-b md:border-b-0 md:border-r border-gray-700 shadow-lg">
+                            <h1 className="text-2xl font-bold text-green-400 mb-6 text-center md:text-left">Course Hub</h1>
+                            <nav className="w-full">
+                                <ul className="space-y-3">
+                                    <li>
+                                        <button
+                                            onClick={() => setCurrentPage('home')}
+                                            className={`w-full text-left px-4 py-2 rounded-lg transition-colors duration-200 ${
+                                                currentPage === 'home' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                                            }`}
+                                        >
+                                            Home
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button
+                                            onClick={() => setCurrentPage('module1-c-basics')}
+                                            className={`w-full text-left px-4 py-2 rounded-lg transition-colors duration-200 ${
+                                                currentPage === 'module1-c-basics' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                                            }`}
+                                        >
+                                            Module 1: C Basics
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button
+                                            onClick={() => setCurrentPage('module2')}
+                                            className={`w-full text-left px-4 py-2 rounded-lg transition-colors duration-200 ${
+                                                currentPage === 'module2' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                                            }`}
+                                        >
+                                            Module 2: HTML & CSS
+                                        </button>
+                                    </li>
+                                    {/* Add more modules here */}
+                                    <li className="pt-4 border-t border-gray-700 mt-4">
+                                        <span className="text-xs text-gray-500 block text-center md:text-left">
+                                            More modules coming soon!
+                                        </span>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </aside>
+
+                        {/* Main Content Area */}
+                        <main className="flex-1 p-6 md:p-8 overflow-y-auto">
+                            <div className="bg-gray-800 rounded-xl shadow-lg min-h-full">
+                                {renderPage()}
+                            </div>
+                        </main>
+                    </div>
+                );
             };
 
-            return (
-                <div className="min-h-screen bg-gray-900 text-white flex flex-col md:flex-row">
-                    {/* Sidebar Navigation */}
-                    <aside className="w-full md:w-64 bg-gray-800 p-6 flex flex-col items-center md:items-start border-b md:border-b-0 md:border-r border-gray-700 shadow-lg">
-                        <h1 className="text-2xl font-bold text-green-400 mb-6 text-center md:text-left">Course Hub</h1>
-                        <nav className="w-full">
-                            <ul className="space-y-3">
-                                <li>
-                                    <button
-                                        onClick={() => setCurrentPage('home')}
-                                        className={`w-full text-left px-4 py-2 rounded-lg transition-colors duration-200 ${
-                                            currentPage === 'home' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                                        }`}
-                                    >
-                                        Home
-                                    </button>
-                                </li>
-                                <li>
-                                    <button
-                                        onClick={() => setCurrentPage('module1-c-basics')}
-                                        className={`w-full text-left px-4 py-2 rounded-lg transition-colors duration-200 ${
-                                            currentPage === 'module1-c-basics' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                                        }`}
-                                    >
-                                        Module 1: C Basics
-                                    </button>
-                                </li>
-                                <li>
-                                    <button
-                                        onClick={() => setCurrentPage('module2')}
-                                        className={`w-full text-left px-4 py-2 rounded-lg transition-colors duration-200 ${
-                                            currentPage === 'module2' ? 'bg-indigo-600 text-white shadow-md' : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                                        }`}
-                                    >
-                                        Module 2: HTML & CSS
-                                    </button>
-                                </li>
-                                {/* Add more modules here */}
-                                <li className="pt-4 border-t border-gray-700 mt-4">
-                                    <span className="text-xs text-gray-500 block text-center md:text-left">
-                                        More modules coming soon!
-                                    </span>
-                                </li>
-                            </ul>
-                        </nav>
-                    </aside>
-
-                    {/* Main Content Area */}
-                    <main className="flex-1 p-6 md:p-8 overflow-y-auto">
-                        <div className="bg-gray-800 rounded-xl shadow-lg min-h-full">
-                            {renderPage()}
-                        </div>
-                    </main>
-                </div>
-            );
-        };
-
         // This line renders your React App component into the 'root' div in your HTML.
-        ReactDOM.render(<App />, document.getElementById('root'));
+        ReactDOM.render(React.createElement(App), document.getElementById('root'));
     </script>
 </body>
 </html>
